@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Swedish Vehicle Lookup</string>
+    <string name="registration_number_hint">Enter registration number</string>
+    <string name="voice_input_hint">Tap microphone to speak</string>
+    <string name="lookup_button">Lookup Vehicle Information</string>
+    <string name="sms_sending">SMS sent. Waiting for response…</string>
+    <string name="sms_service_number">71640</string>
+    <string name="permission_required">Permissions required for app to function</string>
+    <string name="no_response">No response received yet</string>
+    <string name="vehicle_info_title">Vehicle Information</string>
+    <string name="standard_rates_apply">Standard SMS rates apply</string>
+</resources>
