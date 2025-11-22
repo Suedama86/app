@@ -196,7 +196,7 @@ class MainActivity : ComponentActivity() {
                     }
                 } else {
                     Text(
-                        "🔍 Lookup Vehicle Information",
+                        "📱 Open SMS App to Send",
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
@@ -212,7 +212,7 @@ class MainActivity : ComponentActivity() {
                 )
             ) {
                 Text(
-                    text = "⚠️ Standard SMS rates apply. Response typically arrives within 30 seconds.",
+                    text = "⚠️ Standard SMS rates apply. Your SMS app will open with pre-filled message. Send it to receive vehicle info.",
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(12.dp),
                     color = MaterialTheme.colorScheme.onErrorContainer
@@ -311,60 +311,51 @@ class MainActivity : ComponentActivity() {
     private fun sendVehicleLookupSms() {
         val regNumber = _registrationNumber.value.trim()
         
-        if (!checkPermission(Manifest.permission.SEND_SMS)) {
-            Toast.makeText(
-                this,
-                "SMS permission required",
-                Toast.LENGTH_SHORT
-            ).show()
-            requestPermissions()
-            return
-        }
-        
         if (regNumber.isBlank()) {
             Toast.makeText(this, "Please enter a registration number", Toast.LENGTH_SHORT).show()
             return
         }
         
         try {
-            val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                getSystemService(SmsManager::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                SmsManager.getDefault()
+            // Use intent to open SMS app - no special permissions needed
+            val smsIntent = Intent(Intent.ACTION_SENDTO).apply {
+                data = android.net.Uri.parse("smsto:71640")
+                putExtra("sms_body", regNumber)
             }
             
-            smsManager.sendTextMessage(
-                "71640",
-                null,
-                regNumber,
-                null,
-                null
-            )
-            
-            _isLoading.value = true
-            _responseText.value = "📤 SMS sent to 71640\n⏳ Waiting for response..."
-            
-            Toast.makeText(
-                this,
-                "SMS sent successfully!",
-                Toast.LENGTH_SHORT
-            ).show()
-            
-            // Set timeout for response
-            android.os.Handler(mainLooper).postDelayed({
-                if (_isLoading.value) {
-                    _isLoading.value = false
-                    if (_responseText.value.contains("Waiting for response")) {
-                        _responseText.value = "⏱️ No response received yet.\n\nPlease check your SMS inbox manually.\nThe response should arrive from 71640."
+            if (smsIntent.resolveActivity(packageManager) != null) {
+                startActivity(smsIntent)
+                
+                _isLoading.value = true
+                _responseText.value = "📱 SMS app opened\n✍️ Please send the message\n⏳ Waiting for response..."
+                
+                Toast.makeText(
+                    this,
+                    "Send the SMS to receive vehicle info",
+                    Toast.LENGTH_LONG
+                ).show()
+                
+                // Set timeout for response
+                android.os.Handler(mainLooper).postDelayed({
+                    if (_isLoading.value) {
+                        _isLoading.value = false
+                        if (_responseText.value.contains("Waiting for response")) {
+                            _responseText.value = "⏱️ No response received yet.\n\nThe response should arrive from 71640.\nCheck your SMS inbox."
+                        }
                     }
-                }
-            }, 45000) // 45 second timeout
+                }, 60000) // 60 second timeout (longer since user needs to send manually)
+            } else {
+                Toast.makeText(
+                    this,
+                    "No SMS app found on device",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
             
         } catch (e: Exception) {
             Toast.makeText(
                 this,
-                "Failed to send SMS: ${e.message}",
+                "Failed to open SMS app: ${e.message}",
                 Toast.LENGTH_LONG
             ).show()
             _isLoading.value = false
@@ -413,7 +404,6 @@ class MainActivity : ComponentActivity() {
     
     private fun requestPermissions() {
         val permissions = mutableListOf(
-            Manifest.permission.SEND_SMS,
             Manifest.permission.RECEIVE_SMS,
             Manifest.permission.RECORD_AUDIO
         )
