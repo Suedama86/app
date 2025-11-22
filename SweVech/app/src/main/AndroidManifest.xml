@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.swedishvehiclelookup">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- SMS Permissions -->
     <uses-permission android:name="android.permission.SEND_SMS" />
@@ -12,6 +11,10 @@
     
     <!-- Internet permission (if needed for future features) -->
     <uses-permission android:name="android.permission.INTERNET" />
+    
+    <!-- Hardware features - not required but used if available -->
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <application
         android:allowBackup="true"

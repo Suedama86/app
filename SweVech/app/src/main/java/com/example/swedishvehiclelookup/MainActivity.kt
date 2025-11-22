@@ -400,7 +400,7 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(localSmsReceiver, filter, RECEIVER_NOT_EXPORTED)
         } else {
-            registerReceiver(localSmsReceiver, filter)
+            ContextCompat.registerReceiver(this, localSmsReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         }
     }
     
