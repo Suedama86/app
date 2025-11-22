@@ -40,6 +40,8 @@ class MainActivity : ComponentActivity() {
     private val _responseText = mutableStateOf("")
     private val _isLoading = mutableStateOf(false)
     
+    private var _showSettingsDialog = mutableStateOf(false)
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -81,6 +83,38 @@ class MainActivity : ComponentActivity() {
         val registrationNumber by remember { _registrationNumber }
         val responseText by remember { _responseText }
         val isLoading by remember { _isLoading }
+        val showSettingsDialog by remember { _showSettingsDialog }
+        
+        // Settings Dialog
+        if (showSettingsDialog) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { _showSettingsDialog.value = false },
+                title = { Text("SMS Permission Required") },
+                text = {
+                    Text(
+                        "To send SMS automatically, you need to:\n\n" +
+                        "1. Tap 'Open Settings' below\n" +
+                        "2. Tap the ⋮ (three dots) menu in top-right\n" +
+                        "3. Select 'Allow restricted settings'\n" +
+                        "4. Enable 'SMS' permission\n\n" +
+                        "This is required on Android 10+ devices."
+                    )
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        _showSettingsDialog.value = false
+                        openAppSettings()
+                    }) {
+                        Text("Open Settings")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { _showSettingsDialog.value = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
         
         Column(
             modifier = Modifier
@@ -196,7 +230,7 @@ class MainActivity : ComponentActivity() {
                     }
                 } else {
                     Text(
-                        "📱 Open SMS App to Send",
+                        "🔍 Lookup Vehicle Information",
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
@@ -212,7 +246,7 @@ class MainActivity : ComponentActivity() {
                 )
             ) {
                 Text(
-                    text = "⚠️ Standard SMS rates apply. Your SMS app will open with pre-filled message. Send it to receive vehicle info.",
+                    text = "⚠️ Standard SMS rates apply. Response typically arrives within 30 seconds.",
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(12.dp),
                     color = MaterialTheme.colorScheme.onErrorContainer
@@ -316,46 +350,57 @@ class MainActivity : ComponentActivity() {
             return
         }
         
+        if (!checkPermission(Manifest.permission.SEND_SMS)) {
+            showPermissionSettingsDialog()
+            return
+        }
+        
         try {
-            // Use intent to open SMS app - no special permissions needed
-            val smsIntent = Intent(Intent.ACTION_SENDTO).apply {
-                data = android.net.Uri.parse("smsto:71640")
-                putExtra("sms_body", regNumber)
-            }
-            
-            if (smsIntent.resolveActivity(packageManager) != null) {
-                startActivity(smsIntent)
-                
-                _isLoading.value = true
-                _responseText.value = "📱 SMS app opened\n✍️ Please send the message\n⏳ Waiting for response..."
-                
-                Toast.makeText(
-                    this,
-                    "Send the SMS to receive vehicle info",
-                    Toast.LENGTH_LONG
-                ).show()
-                
-                // Set timeout for response
-                android.os.Handler(mainLooper).postDelayed({
-                    if (_isLoading.value) {
-                        _isLoading.value = false
-                        if (_responseText.value.contains("Waiting for response")) {
-                            _responseText.value = "⏱️ No response received yet.\n\nThe response should arrive from 71640.\nCheck your SMS inbox."
-                        }
-                    }
-                }, 60000) // 60 second timeout (longer since user needs to send manually)
+            val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                getSystemService(SmsManager::class.java)
             } else {
-                Toast.makeText(
-                    this,
-                    "No SMS app found on device",
-                    Toast.LENGTH_LONG
-                ).show()
+                @Suppress("DEPRECATION")
+                SmsManager.getDefault()
             }
             
+            smsManager.sendTextMessage(
+                "71640",
+                null,
+                regNumber,
+                null,
+                null
+            )
+            
+            _isLoading.value = true
+            _responseText.value = "📤 SMS sent to 71640\n⏳ Waiting for response..."
+            
+            Toast.makeText(
+                this,
+                "SMS sent successfully!",
+                Toast.LENGTH_SHORT
+            ).show()
+            
+            // Set timeout for response
+            android.os.Handler(mainLooper).postDelayed({
+                if (_isLoading.value) {
+                    _isLoading.value = false
+                    if (_responseText.value.contains("Waiting for response")) {
+                        _responseText.value = "⏱️ No response received yet.\n\nPlease check your SMS inbox manually.\nThe response should arrive from 71640."
+                    }
+                }
+            }, 45000) // 45 second timeout
+            
+        } catch (e: SecurityException) {
+            Toast.makeText(
+                this,
+                "SMS permission denied. Opening settings...",
+                Toast.LENGTH_LONG
+            ).show()
+            showPermissionSettingsDialog()
         } catch (e: Exception) {
             Toast.makeText(
                 this,
-                "Failed to open SMS app: ${e.message}",
+                "Failed to send SMS: ${e.message}",
                 Toast.LENGTH_LONG
             ).show()
             _isLoading.value = false
@@ -404,6 +449,7 @@ class MainActivity : ComponentActivity() {
     
     private fun requestPermissions() {
         val permissions = mutableListOf(
+            Manifest.permission.SEND_SMS,
             Manifest.permission.RECEIVE_SMS,
             Manifest.permission.RECORD_AUDIO
         )
@@ -442,6 +488,26 @@ class MainActivity : ComponentActivity() {
                     Toast.LENGTH_LONG
                 ).show()
             }
+        }
+    }
+    
+    private fun showPermissionSettingsDialog() {
+        _showSettingsDialog.value = true
+    }
+    
+    private fun openAppSettings() {
+        try {
+            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = android.net.Uri.fromParts("package", packageName, null)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(
+                this,
+                "Could not open settings: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
     
