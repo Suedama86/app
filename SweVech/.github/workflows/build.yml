@@ -32,29 +32,3 @@ jobs:
       with:
         name: app-debug
         path: app/build/outputs/apk/debug/app-debug.apk
-```
-
----
-
-## 📂 Mappstruktur
-
-Så här ska filerna placeras:
-```
-DittProjekt/
-├── .github/
-│   └── workflows/
-│       └── build.yml
-├── app/
-│   ├── src/
-│   │   └── main/
-│   │       ├── java/com/example/swedishvehiclelookup/
-│   │       │   ├── MainActivity.kt (din MainActivity_v2.kt)
-│   │       │   └── SmsReceiver.kt
-│   │       ├── res/
-│   │       │   └── values/
-│   │       │       └── strings.xml
-│   │       └── AndroidManifest.xml
-│   └── build.gradle (app-nivå)
-├── build.gradle (projekt-nivå)
-├── settings.gradle
-└── gradle.properties
